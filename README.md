@@ -27,3 +27,8 @@ Unlike most solutions that rely on libraries like `TensorFlow` or `PyTorch`, thi
 
 This project is written in **[Rust]**.
 
+## References
+
+The following papers have been very useful in the journey:
+
+- Florian, Răzvan. (2005). Correct equations for the dynamics of the cart-pole system. 
