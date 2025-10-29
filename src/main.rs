@@ -24,7 +24,7 @@ fn draw_state(state: &Cartpole) {
 
     draw_rectangle(cart_x - cart_w / 2.0, cart_y, cart_w, cart_h, DARKGRAY);
 
-    let pole_len_pixels = (POLE_LENGTH * 20.0) * scale;
+    let pole_len_pixels = (POLE_LENGTH * 750.0) * scale;
     let pole_angle = state.pole_angle;
 
     let pivot_x = cart_x;
@@ -55,16 +55,33 @@ async fn main() {
         draw_state(&result.new_state);
 
         draw_text(
-            &format!("Pos: {:.2}", result.new_state.pos),
+            &format!("Cart Pos: {:.6}", result.new_state.pos),
             10.0,
             30.0,
             30.0,
             BLACK,
         );
         draw_text(
-            &format!("Angle: {:.2}", result.new_state.pole_angle.to_degrees()),
+            &format!("Cart Velocity: {:.6}", result.new_state.velocity),
             10.0,
             60.0,
+            30.0,
+            BLACK,
+        );
+        draw_text(
+            &format!(
+                "Pole Angle: {:.6}",
+                result.new_state.pole_angle.to_degrees()
+            ),
+            10.0,
+            90.0,
+            30.0,
+            BLACK,
+        );
+        draw_text(
+            &format!("Pole Velocity: {:.6}", result.new_state.pole_velocity),
+            10.0,
+            120.0,
             30.0,
             BLACK,
         );
