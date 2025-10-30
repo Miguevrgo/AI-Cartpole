@@ -10,36 +10,27 @@ fn draw_state(state: &Cartpole) {
     let screen_w = screen_width();
     let screen_h = screen_height();
 
-    let world_width = THRESHOLD_POS * 50.0;
-    let scale = screen_w / world_width;
-
     let ground_y = screen_h * 0.75;
+    draw_line(0.0, ground_y, screen_w, ground_y, 3.0, BLACK);
 
-    draw_line(0.0, ground_y, screen_w, ground_y, 2.0, BLACK);
-
-    let cart_x = (state.pos * scale) + (screen_w / 2.0);
+    let cart_x = (state.pos * 3.0) + (screen_w / 2.0);
     let cart_w = 100.0;
     let cart_h = 50.0;
     let cart_y = ground_y - cart_h;
 
     draw_rectangle(cart_x - cart_w / 2.0, cart_y, cart_w, cart_h, DARKGRAY);
 
-    let pole_len_pixels = (POLE_LENGTH * 750.0) * scale;
-    let pole_angle = state.pole_angle;
+    let pole_len_pixels = POLE_LENGTH * 500.0;
 
-    let pivot_x = cart_x;
-    let pivot_y = cart_y;
+    let end_x = cart_x + pole_len_pixels * state.pole_angle.sin();
+    let end_y = cart_y - pole_len_pixels * state.pole_angle.cos();
 
-    let end_x = pivot_x + pole_len_pixels * pole_angle.sin();
-    let end_y = pivot_y - pole_len_pixels * pole_angle.cos();
-
-    draw_line(pivot_x, pivot_y, end_x, end_y, 15.0, RED);
+    draw_line(cart_x, cart_y, end_x, end_y, 15.0, RED);
 }
 
 #[macroquad::main("Cartpole")]
 async fn main() {
     let mut env = Cartpole::new();
-    env.reset();
 
     loop {
         let mut action = Action::None;

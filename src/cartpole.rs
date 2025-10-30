@@ -29,17 +29,10 @@ impl Cartpole {
         }
     }
 
-    pub fn reset(&mut self) {
-        self.velocity = 0.0;
-        self.pos = 0.0;
-        self.pole_angle = PI;
-        self.pole_velocity = 0.0;
-    }
-
     pub fn step(&mut self, action: Action) -> StepResult {
         let force = match action {
-            Action::Left => -FORCE_MAGNITUDE,
-            Action::Right => FORCE_MAGNITUDE,
+            Action::Right => -FORCE_MAGNITUDE,
+            Action::Left => FORCE_MAGNITUDE,
             Action::None => 0.0,
         };
 
@@ -48,6 +41,7 @@ impl Cartpole {
         } else {
             self.velocity.signum()
         };
+
         let sin_theta = self.pole_angle.sin();
         let cos_theta = self.pole_angle.cos();
         let pole_vel_sq = self.pole_velocity.powi(2);
