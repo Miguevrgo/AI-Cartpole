@@ -1,5 +1,6 @@
+use rand::Rng;
+
 use crate::constants::*;
-use std::f32::consts::PI;
 
 #[derive(Clone, Copy)]
 pub enum Action {
@@ -10,6 +11,7 @@ pub enum Action {
 
 pub struct StepResult {
     pub new_state: Cartpole,
+    pub finished: bool,
 }
 
 pub struct Cartpole {
@@ -29,10 +31,18 @@ impl Cartpole {
         }
     }
 
+    pub fn reset(&mut self) {
+        let mut rng = rand::rng();
+        self.velocity = rng.random_range(-0.05..0.05);
+        self.pos = 0.0;
+        self.pole_angle = rng.random_range(-0.05..0.05);
+        self.pole_velocity = rng.random_range(-0.05..0.05);
+    }
+
     pub fn step(&mut self, action: Action) -> StepResult {
         let force = match action {
-            Action::Right => -FORCE_MAGNITUDE,
-            Action::Left => FORCE_MAGNITUDE,
+            Action::Right => FORCE_MAGNITUDE,
+            Action::Left => -FORCE_MAGNITUDE,
             Action::None => 0.0,
         };
 
@@ -81,6 +91,8 @@ impl Cartpole {
         self.pole_angle += self.pole_velocity * TAU;
         self.pole_velocity += pole_ang_acc * TAU;
 
+        let finished = self.pos.abs() > POS_THRESHOLD || self.pole_angle.abs() > ANGLE_THRESHOLD;
+
         StepResult {
             new_state: Cartpole {
                 pos: self.pos,
@@ -88,6 +100,7 @@ impl Cartpole {
                 pole_angle: self.pole_angle,
                 pole_velocity: self.pole_velocity,
             },
+            finished,
         }
     }
 }

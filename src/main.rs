@@ -10,10 +10,21 @@ fn draw_state(state: &Cartpole) {
     let screen_w = screen_width();
     let screen_h = screen_height();
 
-    let ground_y = screen_h * 0.75;
-    draw_line(0.0, ground_y, screen_w, ground_y, 3.0, BLACK);
+    let inner_width = POS_THRESHOLD * 2.5;
 
-    let cart_x = (state.pos * 3.0) + (screen_w / 2.0);
+    let scale = screen_w / inner_width;
+
+    let ground_y = screen_h * 0.75;
+    draw_line(
+        screen_w * 0.15,
+        ground_y,
+        screen_w * 0.85,
+        ground_y,
+        3.0,
+        BLACK,
+    );
+
+    let cart_x = (state.pos * scale) + (screen_w / 2.0);
     let cart_w = 100.0;
     let cart_h = 50.0;
     let cart_y = ground_y - cart_h;
@@ -34,13 +45,17 @@ async fn main() {
 
     loop {
         let mut action = Action::None;
-        if is_key_down(KeyCode::L) {
+        if is_key_down(KeyCode::Left) {
             action = Action::Left;
-        } else if is_key_down(KeyCode::H) {
+        } else if is_key_down(KeyCode::Right) {
             action = Action::Right
         }
 
         let result = env.step(action);
+
+        if result.finished {
+            env.reset();
+        }
 
         clear_background(LIGHTGRAY);
         draw_state(&result.new_state);
