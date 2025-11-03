@@ -2,6 +2,7 @@ use macroquad::prelude::*;
 
 mod cartpole;
 mod constants;
+mod network;
 
 use cartpole::{Action, Cartpole};
 use constants::*;

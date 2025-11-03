@@ -11,6 +11,7 @@ pub enum Action {
 
 pub struct StepResult {
     pub new_state: Cartpole,
+    pub reward: f32,
     pub finished: bool,
 }
 
@@ -92,6 +93,7 @@ impl Cartpole {
         self.pole_velocity += pole_ang_acc * TAU;
 
         let finished = self.pos.abs() > POS_THRESHOLD || self.pole_angle.abs() > ANGLE_THRESHOLD;
+        let reward = (!finished as i32) as f32;
 
         StepResult {
             new_state: Cartpole {
@@ -100,6 +102,7 @@ impl Cartpole {
                 pole_angle: self.pole_angle,
                 pole_velocity: self.pole_velocity,
             },
+            reward,
             finished,
         }
     }
