@@ -44,6 +44,7 @@ impl GameState {
     fn reset_episode(&mut self) {
         if self.total_reward > 0.0 {
             self.episode_rewards.push(self.total_reward);
+            self.agent.update_best_network(self.total_reward);
         }
         self.env.reset();
         self.episode += 1;
@@ -107,42 +108,147 @@ fn draw_state(state: &Cartpole) {
 
 fn draw_ui(game_state: &GameState) {
     let state = &game_state.env;
-    
+
     draw_text("CartPole DQN", 10.0, 30.0, 40.0, BLACK);
-    
+
     let mode_text = match game_state.mode {
         Mode::Manual => "MANUAL",
         Mode::Training => "TRAINING",
         Mode::Watching => "WATCHING AI",
     };
-    draw_text(&format!("Mode: {} (M/T/W)", mode_text), 10.0, 70.0, 25.0, DARKBLUE);
-    
-    draw_text(&format!("Episode: {}", game_state.episode), 10.0, 100.0, 20.0, BLACK);
-    draw_text(&format!("Step: {}", game_state.step), 10.0, 125.0, 20.0, BLACK);
-    draw_text(&format!("Reward: {:.1}", game_state.total_reward), 10.0, 150.0, 20.0, BLACK);
-    
+    draw_text(
+        &format!("Mode: {} (M/T/W)", mode_text),
+        10.0,
+        70.0,
+        25.0,
+        DARKBLUE,
+    );
+
+    draw_text(
+        &format!("Episode: {}", game_state.episode),
+        10.0,
+        100.0,
+        20.0,
+        BLACK,
+    );
+    draw_text(
+        &format!("Step: {}", game_state.step),
+        10.0,
+        125.0,
+        20.0,
+        BLACK,
+    );
+    draw_text(
+        &format!("Reward: {:.1}", game_state.total_reward),
+        10.0,
+        150.0,
+        20.0,
+        BLACK,
+    );
+
     if !game_state.episode_rewards.is_empty() {
-        let avg_reward: f32 = game_state.episode_rewards.iter().rev().take(10).sum::<f32>() 
+        let avg_reward: f32 = game_state
+            .episode_rewards
+            .iter()
+            .rev()
+            .take(10)
+            .sum::<f32>()
             / game_state.episode_rewards.iter().rev().take(10).count() as f32;
-        draw_text(&format!("Avg Reward (10): {:.1}", avg_reward), 10.0, 175.0, 20.0, DARKGREEN);
-    }
-
-    draw_text(&format!("Position: {:.3}", state.pos), 10.0, 210.0, 18.0, GRAY);
-    draw_text(&format!("Velocity: {:.3}", state.velocity), 10.0, 235.0, 18.0, GRAY);
-    draw_text(&format!("Angle: {:.2}°", state.pole_angle.to_degrees()), 10.0, 260.0, 18.0, GRAY);
-    draw_text(&format!("Ang Vel: {:.3}", state.pole_velocity), 10.0, 285.0, 18.0, GRAY);
-
-    if game_state.mode == Mode::Training {
-        draw_text(&format!("Epsilon: {:.3}", game_state.agent.epsilon()), 10.0, 320.0, 18.0, PURPLE);
-        draw_text(&format!("Buffer: {}/{}", game_state.agent.buffer_size(), REPLAY_BUFFER_SIZE), 10.0, 345.0, 18.0, PURPLE);
-        if let Some(loss) = game_state.last_loss {
-            draw_text(&format!("Loss: {:.4}", loss), 10.0, 370.0, 18.0, PURPLE);
+        draw_text(
+            &format!("Avg Reward (10): {:.1}", avg_reward),
+            10.0,
+            175.0,
+            20.0,
+            DARKGREEN,
+        );
+        let best = game_state.agent.best_reward();
+        if best > 0.0 {
+            draw_text(
+                &format!("Best Reward: {:.1}", best),
+                10.0,
+                200.0,
+                20.0,
+                BLUE,
+            );
         }
     }
 
+    draw_text(
+        &format!("Position: {:.3}", state.pos),
+        10.0,
+        235.0,
+        18.0,
+        GRAY,
+    );
+    draw_text(
+        &format!("Velocity: {:.3}", state.velocity),
+        10.0,
+        260.0,
+        18.0,
+        GRAY,
+    );
+    draw_text(
+        &format!("Angle: {:.2}°", state.pole_angle.to_degrees()),
+        10.0,
+        285.0,
+        18.0,
+        GRAY,
+    );
+    draw_text(
+        &format!("Ang Vel: {:.3}", state.pole_velocity),
+        10.0,
+        310.0,
+        18.0,
+        GRAY,
+    );
+
+    if game_state.mode == Mode::Training {
+        draw_text(
+            &format!("Epsilon: {:.3} (exploration)", game_state.agent.epsilon()),
+            10.0,
+            345.0,
+            18.0,
+            PURPLE,
+        );
+        draw_text(
+            &format!(
+                "Buffer: {}/{}",
+                game_state.agent.buffer_size(),
+                REPLAY_BUFFER_SIZE
+            ),
+            10.0,
+            370.0,
+            18.0,
+            PURPLE,
+        );
+        if let Some(loss) = game_state.last_loss {
+            draw_text(&format!("Loss: {:.4}", loss), 10.0, 395.0, 18.0, PURPLE);
+        }
+    } else if game_state.mode == Mode::Watching {
+        draw_text(
+            "Using BEST network (no exploration)",
+            10.0,
+            345.0,
+            18.0,
+            DARKGREEN,
+        );
+        draw_text(
+            &format!("Best reward: {:.1}", game_state.agent.best_reward()),
+            10.0,
+            370.0,
+            18.0,
+            DARKGREEN,
+        );
+    }
+
     let screen_h = screen_height();
-    draw_text("Controls: Arrow Keys (Manual) | Space: Reset | M/T/W: Switch Mode | R: New Agent", 
-              10.0, screen_h - 20.0, 18.0, DARKGRAY);
+    draw_text(
+        "Controls: Arrow Keys (Manual) | Space: Reset | M/T/W: Switch Mode | R: New Agent",
+        10.0,
+        screen_h - 20.0,
+        18.0,
+        DARKGRAY,
+    );
 }
 
 #[macroquad::main("CartPole DQN")]
@@ -174,20 +280,25 @@ async fn main() {
                     Action::None
                 }
             }
-            Mode::Training | Mode::Watching => {
-                game_state.agent.select_action(&game_state.env)
-            }
+            Mode::Training => game_state.agent.select_action(&game_state.env, true),
+            Mode::Watching => game_state.agent.select_action(&game_state.env, false),
         };
 
         let prev_state = game_state.env;
         let result = game_state.env.step(action);
-        
+
         game_state.step += 1;
         game_state.total_reward += result.reward;
 
         if game_state.mode == Mode::Training {
-            game_state.agent.store_experience(&prev_state, action, result.reward, &result.new_state, result.finished);
-            
+            game_state.agent.store_experience(
+                &prev_state,
+                action,
+                result.reward,
+                &result.new_state,
+                result.finished,
+            );
+
             if let Some(loss) = game_state.agent.train() {
                 game_state.last_loss = Some(loss);
             }

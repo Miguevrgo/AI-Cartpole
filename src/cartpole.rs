@@ -58,7 +58,12 @@ impl Cartpole {
     }
 
     pub fn to_array(&self) -> [f32; 4] {
-        [self.pos, self.velocity, self.pole_angle, self.pole_velocity]
+        [
+            self.pos / POS_THRESHOLD,
+            self.velocity / 2.0,
+            self.pole_angle / ANGLE_THRESHOLD,
+            self.pole_velocity / 2.0,
+        ]
     }
 
     pub fn reset(&mut self) {
@@ -86,12 +91,15 @@ impl Cartpole {
         let cos_theta = self.pole_angle.cos();
         let pole_vel_sq = self.pole_velocity.powi(2);
 
-        let temp = (force + MASS_POLE * POLE_LENGTH * pole_vel_sq * sin_theta) / (MASS_CART + MASS_POLE);
+        let temp =
+            (force + MASS_POLE * POLE_LENGTH * pole_vel_sq * sin_theta) / (MASS_CART + MASS_POLE);
         let pole_ang_acc_top = GRAVITY * sin_theta - cos_theta * temp;
-        let pole_ang_acc_bottom = POLE_LENGTH * (4.0 / 3.0 - (MASS_POLE * cos_theta * cos_theta) / (MASS_CART + MASS_POLE));
+        let pole_ang_acc_bottom = POLE_LENGTH
+            * (4.0 / 3.0 - (MASS_POLE * cos_theta * cos_theta) / (MASS_CART + MASS_POLE));
         let pole_ang_acc = pole_ang_acc_top / pole_ang_acc_bottom;
 
-        let cart_acceleration = temp - (MASS_POLE * POLE_LENGTH * pole_ang_acc * cos_theta) / (MASS_CART + MASS_POLE);
+        let cart_acceleration =
+            temp - (MASS_POLE * POLE_LENGTH * pole_ang_acc * cos_theta) / (MASS_CART + MASS_POLE);
 
         self.velocity += cart_acceleration * TAU;
         self.pos += self.velocity * TAU;
@@ -99,7 +107,14 @@ impl Cartpole {
         self.pole_velocity += pole_ang_acc * TAU;
 
         let finished = self.pos.abs() > POS_THRESHOLD || self.pole_angle.abs() > ANGLE_THRESHOLD;
-        let reward = (!finished as i32) as f32;
+
+        let reward = if finished {
+            -1.0
+        } else {
+            let angle_bonus = 1.0 - (self.pole_angle.abs() / ANGLE_THRESHOLD);
+            let pos_bonus = 1.0 - (self.pos.abs() / POS_THRESHOLD);
+            0.1 * (1.0 + angle_bonus + pos_bonus * 0.5)
+        };
 
         StepResult {
             new_state: Cartpole {

@@ -27,7 +27,14 @@ impl ReplayBuffer {
         }
     }
 
-    pub fn push(&mut self, state: [f32; 4], action: Action, reward: f32, next_state: [f32; 4], done: bool) {
+    pub fn push(
+        &mut self,
+        state: [f32; 4],
+        action: Action,
+        reward: f32,
+        next_state: [f32; 4],
+        done: bool,
+    ) {
         if self.buffer.len() >= self.capacity {
             self.buffer.pop_front();
         }
@@ -47,7 +54,7 @@ impl ReplayBuffer {
 
         let mut rng = rand::rng();
         let mut samples = Vec::with_capacity(batch_size);
-        
+
         for _ in 0..batch_size {
             let idx = rng.random_range(0..self.buffer.len());
             samples.push(self.buffer[idx].clone());
@@ -64,29 +71,34 @@ impl ReplayBuffer {
 pub struct DQNAgent {
     q_network: Network,
     target_network: Network,
+    best_network: Network,
     replay_buffer: ReplayBuffer,
     epsilon: f32,
     steps: usize,
+    best_reward: f32,
 }
 
 impl DQNAgent {
     pub fn new() -> Self {
-        let q_network = Network::new(&[32, 32, 2]);
+        let q_network = Network::new(&[64, 64, 2]);
         let target_network = q_network.clone();
-        
+        let best_network = q_network.clone();
+
         DQNAgent {
             q_network,
             target_network,
+            best_network,
             replay_buffer: ReplayBuffer::new(REPLAY_BUFFER_SIZE),
             epsilon: EPSILON_START,
             steps: 0,
+            best_reward: 0.0,
         }
     }
 
-    pub fn select_action(&mut self, state: &Cartpole) -> Action {
+    pub fn select_action(&mut self, state: &Cartpole, explore: bool) -> Action {
         let mut rng = rand::rng();
-        
-        if rng.random_range(0.0..1.0) < self.epsilon {
+
+        if explore && rng.random_range(0.0..1.0) < self.epsilon {
             if rng.random_range(0.0..1.0) < 0.5 {
                 Action::Left
             } else {
@@ -94,12 +106,24 @@ impl DQNAgent {
             }
         } else {
             let state_array = state.to_array();
-            let action_idx = self.q_network.predict(&state_array);
+            let network = if explore {
+                &mut self.q_network
+            } else {
+                &mut self.best_network
+            };
+            let action_idx = network.predict(&state_array);
             Action::from_index(action_idx)
         }
     }
 
-    pub fn store_experience(&mut self, state: &Cartpole, action: Action, reward: f32, next_state: &Cartpole, done: bool) {
+    pub fn store_experience(
+        &mut self,
+        state: &Cartpole,
+        action: Action,
+        reward: f32,
+        next_state: &Cartpole,
+        done: bool,
+    ) {
         self.replay_buffer.push(
             state.to_array(),
             action,
@@ -110,15 +134,23 @@ impl DQNAgent {
     }
 
     pub fn train(&mut self) -> Option<f32> {
+        self.steps += 1;
+
+        if self.steps % TRAIN_FREQ != 0 {
+            return None;
+        }
+
         if let Some(batch) = self.replay_buffer.sample(BATCH_SIZE) {
             let mut total_loss = 0.0;
 
             for experience in batch {
                 let q_values = self.q_network.forward(&experience.state);
                 let next_q_values = self.target_network.forward(&experience.next_state);
-                
-                let max_next_q = next_q_values.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
-                
+
+                let max_next_q = next_q_values
+                    .iter()
+                    .fold(f32::NEG_INFINITY, |a, &b| a.max(b));
+
                 let target_q = if experience.done {
                     experience.reward
                 } else {
@@ -133,8 +165,6 @@ impl DQNAgent {
                 let loss = (target_q - q_values[experience.action.to_index()]).powi(2);
                 total_loss += loss;
             }
-
-            self.steps += 1;
 
             if self.steps % TARGET_UPDATE_FREQ == 0 {
                 self.target_network.copy_weights_from(&self.q_network);
@@ -154,5 +184,16 @@ impl DQNAgent {
 
     pub fn buffer_size(&self) -> usize {
         self.replay_buffer.len()
+    }
+
+    pub fn update_best_network(&mut self, episode_reward: f32) {
+        if episode_reward > self.best_reward {
+            self.best_reward = episode_reward;
+            self.best_network.copy_weights_from(&self.q_network);
+        }
+    }
+
+    pub fn best_reward(&self) -> f32 {
+        self.best_reward
     }
 }
