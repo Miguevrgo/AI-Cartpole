@@ -2,11 +2,29 @@ use rand::Rng;
 
 use crate::constants::*;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Action {
     Left,
     Right,
     None,
+}
+
+impl Action {
+    pub fn to_index(&self) -> usize {
+        match self {
+            Action::Left => 0,
+            Action::Right => 1,
+            Action::None => 2,
+        }
+    }
+
+    pub fn from_index(index: usize) -> Self {
+        match index {
+            0 => Action::Left,
+            1 => Action::Right,
+            _ => Action::None,
+        }
+    }
 }
 
 pub struct StepResult {
@@ -15,11 +33,18 @@ pub struct StepResult {
     pub finished: bool,
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct Cartpole {
     pub velocity: f32,
     pub pos: f32,
     pub pole_angle: f32,
     pub pole_velocity: f32,
+}
+
+impl Default for Cartpole {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Cartpole {
@@ -30,6 +55,10 @@ impl Cartpole {
             pole_angle: 0.0,
             pole_velocity: 0.0,
         }
+    }
+
+    pub fn to_array(&self) -> [f32; 4] {
+        [self.pos, self.velocity, self.pole_angle, self.pole_velocity]
     }
 
     pub fn reset(&mut self) {
@@ -47,7 +76,7 @@ impl Cartpole {
             Action::None => 0.0,
         };
 
-        let sgn_x = if self.velocity == 0.0 {
+        let _sgn_x = if self.velocity == 0.0 {
             0.0
         } else {
             self.velocity.signum()
@@ -57,35 +86,12 @@ impl Cartpole {
         let cos_theta = self.pole_angle.cos();
         let pole_vel_sq = self.pole_velocity.powi(2);
 
-        // Pole angular accelearation as a coefficient of top / bottom
-        let pole_ang_acc_top = GRAVITY * sin_theta
-            + cos_theta
-                * (((-force
-                    - MASS_POLE
-                        * POLE_LENGTH
-                        * pole_vel_sq
-                        * (sin_theta + MU_C * sgn_x * cos_theta))
-                    / (MASS_CART + MASS_POLE))
-                    + MU_C * GRAVITY * sgn_x)
-            - (MU_P * self.pole_velocity) / (MASS_POLE * POLE_LENGTH);
-
-        let pole_ang_acc_bottom = POLE_LENGTH
-            * ((4.0 / 3.0)
-                - ((MASS_POLE * cos_theta) / (MASS_CART + MASS_POLE) * (cos_theta - MU_C * sgn_x)));
-
+        let temp = (force + MASS_POLE * POLE_LENGTH * pole_vel_sq * sin_theta) / (MASS_CART + MASS_POLE);
+        let pole_ang_acc_top = GRAVITY * sin_theta - cos_theta * temp;
+        let pole_ang_acc_bottom = POLE_LENGTH * (4.0 / 3.0 - (MASS_POLE * cos_theta * cos_theta) / (MASS_CART + MASS_POLE));
         let pole_ang_acc = pole_ang_acc_top / pole_ang_acc_bottom;
 
-        let norm_force = (MASS_CART + MASS_POLE) * GRAVITY
-            - MASS_POLE * POLE_LENGTH * (pole_ang_acc * sin_theta + pole_vel_sq * cos_theta);
-
-        // Cart angular accelearation as a coefficient of top / bottom
-        let cart_ang_acc_top = force
-            + MASS_POLE * POLE_LENGTH * (pole_vel_sq * sin_theta - pole_ang_acc * cos_theta)
-            - MU_C * norm_force * sgn_x;
-
-        let cart_ang_acc_bottom = MASS_CART + MASS_POLE;
-
-        let cart_acceleration = cart_ang_acc_top / cart_ang_acc_bottom;
+        let cart_acceleration = temp - (MASS_POLE * POLE_LENGTH * pole_ang_acc * cos_theta) / (MASS_CART + MASS_POLE);
 
         self.velocity += cart_acceleration * TAU;
         self.pos += self.velocity * TAU;
