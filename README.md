@@ -1,6 +1,6 @@
 # AI-Cartpole
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/Miguevrgo/AI-Cartpole/build.yml?branch=main)](https://github.com/YOUR_USERNAME/AI-Cartpole/actions)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/Miguevrgo/AI-Cartpole/build.yml?branch=main)](https://github.com/Miguevrgo/AI-Cartpole/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 An Artificial Intelligence agent that learns to balance an inverted pendulum (the classic "CartPole" problem) using Reinforcement Learning (DQN) **implemented from scratch** in [Your Language: Rust/C++/C].
